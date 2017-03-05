@@ -1,0 +1,231 @@
+<html> 
+  <head> 
+        <meta charset="utf-8"> 
+        <title>HelloWorld</title> 
+         <script src="js/d3/d3.js" charset="utf-8"></script> 
+  </head> 
+
+
+    <body> 
+
+    	<div id="draw_tools"  align="center">
+		</div>
+
+
+	    <div id="draw_svg"  align="center">
+	    <div>
+    </body> 
+
+
+
+    <script type="text/javascript">
+    	
+    var MouseState = { 
+	    	MousePressed:false,
+	    	StartPoint:[0,0],
+	    	EndPoint:[0,0],
+	    	PathPoint:[],
+	    	SelectId:""
+    };
+    
+    var ToolsState = {
+    		type:"softline",
+    		fill:true,
+    		fill_color:"#000000",
+    		stroke:"#000000",
+    		stroke_width:1
+    };
+
+
+    var svg_width 		= 	800;  //画布的宽度
+	var svg_height 		= 	600;   //画布的高度
+
+	var draw_tools		= 	d3.select("#draw_tools");
+	var draw_svg 		= 	d3.select("#draw_svg")
+								.append("svg")          //添加一个svg元素
+							    .attr("width", svg_width)       //设定宽度
+							    .attr("height", svg_height);    //设定高度;    //选择文档中的body元素
+
+
+
+
+
+    initDrawTools(draw_tools);
+    initEventTools(draw_tools);
+    initDrawSvg(draw_svg);
+    initEventSvg(draw_svg);
+
+
+function getPoints(Parray){
+	var pstr = "";
+	for(var i=0;i<Parray.length;i++){
+		pstr += Parray[i]+" ";
+		// pstr += Parray[i][0]+" "+Parray[i][1]+" ";
+	
+	}
+	return pstr;
+};
+
+
+function setShapeData(shape,type){
+	if(type == "polyline"){
+		shape.attr("points",getPoints(MouseState.PathPoint));
+	}else if (type == "line"){
+		shape.attr("x1",MouseState.StartPoint[0])
+				.attr("y1",MouseState.StartPoint[1])
+				.attr("x2",MouseState.EndPoint[0])
+				.attr("y2",MouseState.EndPoint[1]);
+	}
+	else if (type == "rect"){
+		if(MouseState.StartPoint[0] < MouseState.EndPoint[0]){
+			shape.attr("x",MouseState.StartPoint[0])
+				.attr("y",MouseState.StartPoint[1])
+				.attr("width",MouseState.EndPoint[0]-MouseState.StartPoint[0])
+				.attr("height",MouseState.EndPoint[1]-MouseState.StartPoint[1]);
+		}
+	}else if (type == "ellipse"){
+		shape.attr("cx",MouseState.StartPoint[0])
+			.attr("cy",MouseState.StartPoint[1])
+			.attr("rx",Math.abs(MouseState.EndPoint[0]-MouseState.StartPoint[0]))
+			.attr("ry",Math.abs(MouseState.EndPoint[1]-MouseState.StartPoint[1]));
+		
+	}
+}
+
+
+function initDrawSvg(svg){
+
+	svg.append("rect")
+		.attr("width", svg_width)       //设定宽度
+	    .attr("height", svg_height)   //设定高度
+	    .attr("fill",d3.rgb(200,180,172));
+
+    svg.append("text")
+	    .attr("id","text")
+	    .attr("x",0)
+	    .attr("y",15)
+	    .attr("fill","red")
+	    .text("hello");
+    
+};
+
+
+
+function initEventSvg(svg){
+
+	svg.on("mousedown",function(e){
+		MouseState.MousePressed = true;
+		MouseState.StartPoint = d3.mouse(this);
+	
+	    MouseState.SelectId = ToolsState.type+parseInt(Math.random()*10000000);
+	    
+    	svg.append(ToolsState.type)
+			.attr("fill",ToolsState.fill)
+			.attr("stroke",ToolsState.stroke)
+			.attr("stroke-width",ToolsState.stroke_width)
+	    	.attr("id",MouseState.SelectId);
+	    
+		
+	});
+
+
+
+	svg.on("mouseup",function(e){
+		MouseState.MousePressed = false;
+		MouseState.EndPoint = d3.mouse(this);
+		MouseState.PathPoint=[];
+	});
+
+
+	svg.on("mousemove",function(e,i){
+		d3.select("#text").text(d3.mouse(this));
+		if(MouseState.MousePressed){
+			MouseState.PathPoint.push(d3.mouse(this));
+			MouseState.EndPoint = d3.mouse(this);
+			var shape = d3.select("#"+MouseState.SelectId);
+			setShapeData(shape,ToolsState.type);
+		}
+	});
+
+};
+
+
+function initDrawTools(draw_tools){
+	draw_tools.append("label")
+			.text("type:");
+
+	var tools_type = [,"polyline","line","rect","ellipse"]
+	draw_tools.append("select").attr("id","tool_type").selectAll("option")
+			.data(tools_type)
+			.enter()
+			.append("option")
+			.attr("value",function(d){return d})
+			.text(function(d){return d});
+
+	//fill:none stroke:#FF1122;stroke-width:3
+	draw_tools.append("label").text("fill:")
+			.append("input")
+			.attr("id","tool_fill")
+			.attr("type","checkbox")
+			.attr("value","fill")
+			.attr("checked","checked")
+
+	draw_tools.append("label").text("fill_color:")
+			.append("input")
+			.attr("id","tool_fill_color")
+			.attr("type","color");
+
+			
+	draw_tools.append("label").text("stroke:")
+			.append("input")
+			.attr("id","tool_stroke")
+			.attr("type","color");
+
+	draw_tools.append("label").text("stroke-width:")
+			.append("select").attr("id","tool_stroke_width").selectAll("option")
+			.data([0,1,2,3,4,5,6,7,8,9])
+			.enter()
+			.append("option")
+			.attr("value",function(d){return d})
+			.text(function(d){return d});
+};
+
+
+
+function initEventTools(draw_tools){
+	draw_tools.select("#tool_type").on("change",function(){
+		ToolsState.type = this.options[this.options.selectedIndex].value;
+		console.log(this.options[this.options.selectedIndex].value);
+	});
+
+	draw_tools.select("#tool_fill").on("change",function(){
+		if(this.checked){
+			ToolsState.fill = ToolsState.fill_color;
+		}else{
+			ToolsState.fill = "none";
+		}
+		console.log(this.checked);
+	});
+
+	draw_tools.select("#tool_stroke_width").on("change",function(){
+		ToolsState.stroke_width = this.options[this.options.selectedIndex].value;
+		console.log(this.options[this.options.selectedIndex].value);
+	});
+
+	draw_tools.select("#tool_stroke").on("change",function(){
+		ToolsState.stroke = this.value;
+		console.log(this.value);
+	});
+
+	draw_tools.select("#tool_fill_color").on("change",function(){
+		ToolsState.fill_color = this.value;
+		console.log(this.value);
+	});
+};
+
+
+
+
+    </script>
+
+</html>
